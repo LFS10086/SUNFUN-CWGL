@@ -77,6 +77,14 @@ npm start
 
 Windows 本机也提供了辅助部署脚本。拿到腾讯云轻量服务器 IP 和 SSH 登录方式后，可在 PowerShell 执行：
 
+先预检服务器环境：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\preflight-from-windows.ps1 -HostName 服务器IP -User root
+```
+
+预检通过后部署：
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-from-windows.ps1 -HostName 服务器IP -User root
 ```
@@ -84,6 +92,7 @@ powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-from-windows.
 如果使用 SSH 私钥：
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\preflight-from-windows.ps1 -HostName 服务器IP -User root -SshKeyPath D:\workspace\your-key.pem
 powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-from-windows.ps1 -HostName 服务器IP -User root -SshKeyPath D:\workspace\your-key.pem
 ```
 
