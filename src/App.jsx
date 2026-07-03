@@ -631,7 +631,7 @@ function createProjectNo(customers = []) {
 function budgetOptionsForCustomer(customer) {
   return (customer?.budget || []).map((item) => ({
     value: item.id,
-    label: `${item.category} / ${item.item}`,
+    label: item.item,
     category: item.category,
     item: item.item,
   }))
@@ -2365,7 +2365,7 @@ function App() {
             <Field label="金额">
               <input type="number" value={expenseDraft.amount} onChange={(event) => setExpenseDraft((draft) => ({ ...draft, amount: event.target.value }))} />
             </Field>
-            <Field label="预算项">
+            <Field label="预算内容">
               <select
                 value={expenseDraft.budgetId}
                 onChange={(event) => {
@@ -2424,7 +2424,6 @@ function App() {
                 <tr>
                   <th>日期</th>
                   <th>项目</th>
-                  <th>预算项</th>
                   <th>预算内容</th>
                   <th>用途</th>
                   <th>收款对象</th>
@@ -2437,7 +2436,6 @@ function App() {
                   <tr key={expense.id}>
                     <td>{expense.date}</td>
                     <td>{expense.projectNo}</td>
-                    <td>{expense.category}</td>
                     <td>{expense.budgetItem || '-'}</td>
                     <td>{expense.purpose}</td>
                     <td>{partnerMap.get(expense.partnerId)?.name || expense.payeeType}</td>

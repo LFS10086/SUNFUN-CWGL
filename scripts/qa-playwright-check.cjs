@@ -300,9 +300,20 @@ async function main() {
   await nav.getByRole('button', { name: /支出管理/ }).click()
   await page.screenshot({ path: path.join(outDir, 'expense-budget-options.png'), fullPage: true })
   const expenseForm = page.locator('form.compact-form')
+  const expenseFormLabels = await expenseForm.locator('.field > span').allTextContents()
+  if (expenseFormLabels.includes('预算项')) {
+    throw new Error('支出表单仍显示预算项字段')
+  }
+  if (!expenseFormLabels.includes('预算内容')) {
+    throw new Error('支出表单缺少预算内容选择框')
+  }
+  const expenseHeaderText = await page.locator('.table-wrap table thead').first().innerText()
+  if (expenseHeaderText.includes('预算项')) {
+    throw new Error('支出流水仍显示预算项列')
+  }
   await expenseForm.locator('label:has-text("金额") input').fill('999999')
   const expenseSelects = expenseForm.locator('select')
-  if (await expenseSelects.count() < 2) throw new Error('支出表单缺少预算项选择框')
+  if (await expenseSelects.count() < 2) throw new Error('支出表单缺少预算内容选择框')
   await expenseSelects.nth(1).selectOption({ index: 1 })
   await expenseForm.locator('label:has-text("用途") input').fill('自动验收超支支出')
   await expenseForm.getByRole('button', { name: /保存支出/ }).click()
