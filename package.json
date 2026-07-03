@@ -11,7 +11,8 @@
     "package:win": "npm run build && electron-builder --win nsis portable --publish never",
     "lint": "oxlint",
     "preview": "vite preview",
-    "qa": "node scripts/qa-playwright-check.cjs"
+    "qa": "node scripts/qa-playwright-check.cjs",
+    "qa:cloud": "node scripts/cloud-e2e-check.cjs"
   },
   "build": {
     "appId": "com.sanfeng.finance",

@@ -75,6 +75,18 @@ npm start
 6. 桌面端登录页填写云端 API 地址，例如 `http://服务器IP:8787` 或你的 HTTPS 域名。
 7. 注册经销商账户后，该经销商代码会生成独立云端后台；同代码账户只看到同代码数据。
 
+Windows 本机也提供了辅助部署脚本。拿到腾讯云轻量服务器 IP 和 SSH 登录方式后，可在 PowerShell 执行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-from-windows.ps1 -HostName 服务器IP -User root
+```
+
+如果使用 SSH 私钥：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-from-windows.ps1 -HostName 服务器IP -User root -SshKeyPath D:\workspace\your-key.pem
+```
+
 注意：腾讯云账号注册、实名、购买服务器和支付确认必须由账号所有人自己完成。不要把腾讯云 SecretId、SecretKey、服务器密码发到公开仓库。
 
 ## 图片识别插件
@@ -95,6 +107,7 @@ Word/Excel 导入在浏览器端完成：Excel/CSV 使用 `xlsx` 解析，Word `
 npm run lint
 npm run build
 npm run qa
+npm run qa:cloud
 ```
 
 `npm run qa` 会用 Playwright 自动登录并检查经销商密码重置、收款提示、支出超支提示、预算导入、报表和移动端页面，截图输出在 `D:\workspace\sanfeng-finance-delivery\playwright\`。
