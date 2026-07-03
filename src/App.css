@@ -72,6 +72,16 @@ button:disabled {
   gap: 16px;
 }
 
+.cloud-mode-hint {
+  margin-top: -6px;
+  color: #64736f;
+  font-size: 13px;
+}
+
+.cloud-mode-hint.online {
+  color: #006f59;
+}
+
 .login-aside {
   display: grid;
   align-content: center;
@@ -200,12 +210,19 @@ button:disabled {
 }
 
 .sidebar-footer span,
-.sidebar-footer strong {
+.sidebar-footer strong,
+.sidebar-footer small {
   display: block;
 }
 
 .sidebar-footer span {
   color: #b9d7cf;
+  font-size: 12px;
+}
+
+.sidebar-footer small {
+  margin-top: 6px;
+  color: #9fc7bd;
   font-size: 12px;
 }
 

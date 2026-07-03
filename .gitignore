@@ -12,6 +12,7 @@ dist
 dist-ssr
 output
 *.local
+cloud-api/data
 
 # Editor directories and files
 .vscode/*

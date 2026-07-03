@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   Archive,
@@ -56,6 +56,8 @@ const ACCOUNTS_KEY = 'sanfeng-finance-accounts-v1'
 const SESSION_KEY = 'sanfeng-finance-session-v1'
 const DEALER_DATA_PREFIX = `${STORAGE_KEY}:dealer:`
 const ADMIN_PASSWORD_RESET_KEY = 'sanfeng-finance-admin-password-reset-20260701-v2'
+const CLOUD_API_URL_KEY = 'sanfeng-finance-cloud-api-url-v1'
+const CLOUD_TOKEN_KEY = 'sanfeng-finance-cloud-token-v1'
 
 const categoryOptions = ['水', '电', '瓦', '木', '油', '材料', '其他']
 const partnerTypeOptions = ['项目经理', '施工人员', '供货商']
@@ -316,6 +318,34 @@ function saveDealerData(dealerCode, nextData) {
 function removeDealerData(dealerCode) {
   localStorage.removeItem(dealerDataKey(dealerCode))
   if (dealerCode === 'admin') localStorage.removeItem(STORAGE_KEY)
+}
+
+function normalizeCloudApiUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '')
+}
+
+async function cloudRequest(apiUrl, pathName, { token, method = 'GET', body } = {}) {
+  const baseUrl = normalizeCloudApiUrl(apiUrl)
+  if (!baseUrl) throw new Error('请先填写云端 API 地址')
+  const response = await fetch(`${baseUrl}${pathName}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || `云端请求失败：${response.status}`)
+  return payload
+}
+
+function normalizeCloudSnapshot(snapshot) {
+  const nextAccounts = Array.isArray(snapshot?.accounts)
+    ? snapshot.accounts.map((item, index) => normalizeAccount({ ...item, password: item.password || encodePassword('cloud-account') }, index))
+    : []
+  const nextData = normalizeData(snapshot?.data || createEmptyData())
+  return { accounts: nextAccounts, data: nextData }
 }
 
 function getSigningTotal(customer) {
@@ -861,7 +891,7 @@ function ToastStack({ toasts, removeToast }) {
   )
 }
 
-function LoginScreen({ accounts, account, onLogin, onRegister, onResetPassword }) {
+function LoginScreen({ accounts, account, cloudApiUrl, setCloudApiUrl, onLogin, onRegister, onResetPassword }) {
   const [isRegistering, setIsRegistering] = useState(false)
   const [username, setUsername] = useState(account.username)
   const [displayName, setDisplayName] = useState('')
@@ -871,38 +901,60 @@ function LoginScreen({ accounts, account, onLogin, onRegister, onResetPassword }
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [busy, setBusy] = useState(false)
+  const isCloudMode = Boolean(normalizeCloudApiUrl(cloudApiUrl))
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
     setSuccess('')
+    setBusy(true)
+    setError('')
     if (isRegistering) {
       if (!username.trim() || !displayName.trim() || password.length < 6) {
         setError('请填写经销商代码、名称和至少 6 位密码')
+        setBusy(false)
         return
       }
       if (password !== confirmPassword) {
         setError('两次输入的密码不一致')
+        setBusy(false)
         return
       }
-      onRegister({
-        username: username.trim(),
-        dealerCode: username.trim(),
-        displayName: displayName.trim(),
-        role,
-        password: encodePassword(password),
-      })
+      try {
+        await onRegister({
+          username: username.trim(),
+          dealerCode: username.trim(),
+          displayName: displayName.trim(),
+          role,
+          password,
+        })
+      } catch (error) {
+        setError(error.message || '注册失败')
+      } finally {
+        setBusy(false)
+      }
       return
     }
-    const matchedAccount = accounts.find((item) =>
-      item.username === username.trim()
-      && item.role === role
-      && item.password === encodePassword(password),
-    )
-    if (matchedAccount) {
-      onLogin(matchedAccount)
-      return
+    try {
+      if (isCloudMode) {
+        await onLogin({ username: username.trim(), dealerCode: username.trim(), role, password })
+        return
+      }
+      const matchedAccount = accounts.find((item) =>
+        item.username === username.trim()
+        && item.role === role
+        && item.password === encodePassword(password),
+      )
+      if (matchedAccount) {
+        await onLogin(matchedAccount)
+        return
+      }
+      setError('经销商代码、职位或密码不正确')
+    } catch (error) {
+      setError(error.message || '登录失败')
+    } finally {
+      setBusy(false)
     }
-    setError('经销商代码、职位或密码不正确')
   }
 
   const resetPassword = () => {
@@ -933,6 +985,21 @@ function LoginScreen({ accounts, account, onLogin, onRegister, onResetPassword }
                 autoComplete="username"
               />
           </Field>
+          <Field label="云端 API 地址">
+            <input
+              value={cloudApiUrl}
+              onChange={(event) => {
+                setCloudApiUrl(event.target.value)
+                setError('')
+                setSuccess('')
+              }}
+              placeholder="不填为单机模式，例如 https://api.example.com"
+              autoComplete="url"
+            />
+          </Field>
+          <div className={`cloud-mode-hint ${isCloudMode ? 'online' : ''}`}>
+            {isCloudMode ? '云端模式：登录后数据会自动同步到腾讯云后端' : '单机模式：数据只保存在当前电脑'}
+          </div>
           {isRegistering && (
             <Field label="经销商名称">
               <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="organization" />
@@ -978,7 +1045,7 @@ function LoginScreen({ accounts, account, onLogin, onRegister, onResetPassword }
           {success && <div className="form-success">{success}</div>}
           <button className="primary-btn wide" type="submit">
             <LockKeyhole size={17} />
-            {isRegistering ? '注册并进入系统' : '登录系统'}
+            {busy ? '处理中...' : isRegistering ? '注册并进入系统' : '登录系统'}
           </button>
           {!isRegistering && (
             <button
@@ -1041,6 +1108,9 @@ function App() {
   const [account, setAccount] = useState(initialState.account)
   const [isAuthed, setIsAuthed] = useState(() => Boolean(sessionStorage.getItem(SESSION_KEY)))
   const [data, setData] = useState(initialState.data)
+  const [cloudApiUrl, setCloudApiUrlState] = useState(() => localStorage.getItem(CLOUD_API_URL_KEY) || '')
+  const [cloudToken, setCloudToken] = useState(() => sessionStorage.getItem(CLOUD_TOKEN_KEY) || '')
+  const [cloudStatus, setCloudStatus] = useState('')
   const [active, setActive] = useState('dashboard')
   const [selectedProject, setSelectedProject] = useState(data.customers[0]?.projectNo || '')
   const [search, setSearch] = useState('')
@@ -1109,6 +1179,14 @@ function App() {
   const [ocrRows, setOcrRows] = useState([])
   const [ocrProgress, setOcrProgress] = useState('')
   const [ocrBusy, setOcrBusy] = useState(false)
+  const cloudSyncSkipRef = useRef(false)
+  const cloudBootLoadedRef = useRef(false)
+
+  const setCloudApiUrl = (value) => {
+    const nextUrl = value
+    setCloudApiUrlState(nextUrl)
+    localStorage.setItem(CLOUD_API_URL_KEY, nextUrl)
+  }
 
   useEffect(() => {
     if (isAuthed) saveDealerData(account.dealerCode, data)
@@ -1117,6 +1195,57 @@ function App() {
   useEffect(() => {
     saveAccounts(accounts)
   }, [accounts])
+
+  useEffect(() => {
+    const apiUrl = normalizeCloudApiUrl(cloudApiUrl)
+    if (cloudBootLoadedRef.current || !isAuthed || !apiUrl || !cloudToken) return
+    cloudBootLoadedRef.current = true
+    ;(async () => {
+      try {
+        setCloudStatus('正在加载云端数据...')
+        const payload = await cloudRequest(apiUrl, `/api/dealers/${encodeURIComponent(account.dealerCode)}/snapshot`, {
+          token: cloudToken,
+        })
+        const snapshot = normalizeCloudSnapshot(payload)
+        const nextAccount = snapshot.accounts.find((item) => item.id === account.id) || account
+        cloudSyncSkipRef.current = true
+        setAccounts(snapshot.accounts.length ? snapshot.accounts : accounts)
+        setAccount(nextAccount)
+        setData(snapshot.data)
+        resetWorkspaceState(snapshot.data)
+        saveDealerData(nextAccount.dealerCode, snapshot.data)
+        setCloudStatus('云端数据已加载')
+      } catch (error) {
+        setCloudStatus(error.message || '云端数据加载失败')
+      }
+    })()
+  }, [account, accounts, cloudApiUrl, cloudToken, isAuthed])
+
+  useEffect(() => {
+    const apiUrl = normalizeCloudApiUrl(cloudApiUrl)
+    if (!isAuthed || !apiUrl || !cloudToken) return undefined
+    if (cloudSyncSkipRef.current) {
+      cloudSyncSkipRef.current = false
+      return undefined
+    }
+    const timer = window.setTimeout(async () => {
+      try {
+        setCloudStatus('正在同步云端...')
+        await cloudRequest(apiUrl, `/api/dealers/${encodeURIComponent(account.dealerCode)}/snapshot`, {
+          token: cloudToken,
+          method: 'PUT',
+          body: {
+            accounts: accounts.filter((item) => item.dealerCode === account.dealerCode),
+            data,
+          },
+        })
+        setCloudStatus('云端已同步')
+      } catch (error) {
+        setCloudStatus(error.message || '云端同步失败')
+      }
+    }, 900)
+    return () => window.clearTimeout(timer)
+  }, [account.dealerCode, accounts, cloudApiUrl, cloudToken, data, isAuthed])
 
   useEffect(() => {
     setIncomeDraft((draft) => ({ ...draft, projectNo: selectedProject }))
@@ -1324,7 +1453,32 @@ function App() {
     return false
   }
 
-  const handleLogin = (nextAccount) => {
+  const handleLogin = async (nextAccount) => {
+    if (nextAccount?.password && !nextAccount?.id && normalizeCloudApiUrl(cloudApiUrl)) {
+      const payload = await cloudRequest(cloudApiUrl, '/api/auth/login', {
+        method: 'POST',
+        body: {
+          dealerCode: nextAccount.dealerCode,
+          username: nextAccount.username,
+          role: nextAccount.role,
+          password: nextAccount.password,
+        },
+      })
+      const snapshot = normalizeCloudSnapshot(payload)
+      const cloudAccount = normalizeAccount({ ...payload.account, password: encodePassword('cloud-account') })
+      cloudSyncSkipRef.current = true
+      setCloudToken(payload.token)
+      sessionStorage.setItem(CLOUD_TOKEN_KEY, payload.token)
+      setAccounts(snapshot.accounts.length ? snapshot.accounts : [cloudAccount])
+      setAccount(cloudAccount)
+      setData(snapshot.data)
+      resetWorkspaceState(snapshot.data)
+      saveDealerData(cloudAccount.dealerCode, snapshot.data)
+      sessionStorage.setItem(SESSION_KEY, cloudAccount.id)
+      setIsAuthed(true)
+      setCloudStatus('云端登录成功')
+      return
+    }
     const nextData = loadDealerData(nextAccount.dealerCode)
     setAccount(nextAccount)
     setData(nextData)
@@ -1333,8 +1487,34 @@ function App() {
     setIsAuthed(true)
   }
 
-  const handleRegisterAccount = (nextAccount) => {
-    const normalizedAccount = normalizeAccount({ ...nextAccount, id: uid('account') }, accounts.length)
+  const handleRegisterAccount = async (nextAccount) => {
+    if (normalizeCloudApiUrl(cloudApiUrl)) {
+      const payload = await cloudRequest(cloudApiUrl, '/api/auth/register', {
+        method: 'POST',
+        body: {
+          dealerCode: nextAccount.dealerCode,
+          displayName: nextAccount.displayName,
+          role: nextAccount.role,
+          password: nextAccount.password,
+        },
+      })
+      const snapshot = normalizeCloudSnapshot(payload)
+      const cloudAccount = normalizeAccount({ ...payload.account, password: encodePassword('cloud-account') })
+      cloudSyncSkipRef.current = true
+      setCloudToken(payload.token)
+      sessionStorage.setItem(CLOUD_TOKEN_KEY, payload.token)
+      setAccounts(snapshot.accounts.length ? snapshot.accounts : [cloudAccount])
+      setAccount(cloudAccount)
+      setData(snapshot.data)
+      resetWorkspaceState(snapshot.data)
+      saveDealerData(cloudAccount.dealerCode, snapshot.data)
+      sessionStorage.setItem(SESSION_KEY, cloudAccount.id)
+      setIsAuthed(true)
+      setCloudStatus('云端账户已创建')
+      addToast('已创建腾讯云独立经销商后台，当前业务数据为空')
+      return
+    }
+    const normalizedAccount = normalizeAccount({ ...nextAccount, id: uid('account'), password: encodePassword(nextAccount.password) }, accounts.length)
     const dealerCodeChanged = normalizedAccount.dealerCode !== account.dealerCode
     const nextData = dealerCodeChanged ? normalizeData(createEmptyData()) : loadDealerData(normalizedAccount.dealerCode)
     setAccounts((items) => [normalizedAccount, ...items])
@@ -1364,6 +1544,9 @@ function App() {
 
   const handleLogout = () => {
     sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(CLOUD_TOKEN_KEY)
+    setCloudToken('')
+    setCloudStatus('')
     setIsAuthed(false)
   }
 
@@ -1758,12 +1941,30 @@ function App() {
     addToast('预算已录入客户档案')
   }
 
-  const handlePasswordChange = (event) => {
+  const handlePasswordChange = async (event) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const oldPassword = form.get('oldPassword')
     const newPassword = form.get('newPassword')
     const confirmPassword = form.get('confirmPassword')
+    if (normalizeCloudApiUrl(cloudApiUrl) && cloudToken) {
+      if (!newPassword || newPassword.length < 6 || newPassword !== confirmPassword) {
+        addToast('新密码至少 6 位且两次输入一致', 'warning')
+        return
+      }
+      try {
+        await cloudRequest(cloudApiUrl, `/api/accounts/${encodeURIComponent(account.id)}/password`, {
+          token: cloudToken,
+          method: 'PATCH',
+          body: { oldPassword, newPassword },
+        })
+        setPasswordModal(false)
+        addToast('云端密码已修改')
+      } catch (error) {
+        addToast(error.message || '云端改密失败', 'warning')
+      }
+      return
+    }
     if (encodePassword(oldPassword) !== account.password) {
       addToast('原密码不正确', 'warning')
       return
@@ -1789,12 +1990,23 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
-  const deleteAccount = (accountId) => {
+  const deleteAccount = async (accountId) => {
     const target = accounts.find((item) => item.id === accountId)
     if (!target || target.dealerCode !== account.dealerCode) return
     if (!canDeleteAccounts) {
       addToast('只有经销商账号可以删除同代码下的账户', 'warning')
       return
+    }
+    if (normalizeCloudApiUrl(cloudApiUrl) && cloudToken) {
+      try {
+        await cloudRequest(cloudApiUrl, `/api/accounts/${encodeURIComponent(accountId)}`, {
+          token: cloudToken,
+          method: 'DELETE',
+        })
+      } catch (error) {
+        addToast(error.message || '云端删除账户失败', 'warning')
+        return
+      }
     }
     const remainingAccounts = accounts.filter((item) => item.id !== accountId)
     if (target.role === '经销商') {
@@ -2924,6 +3136,7 @@ function App() {
         <header className="panel-header">
           <div>
             <h2>本地数据</h2>
+            <span>{normalizeCloudApiUrl(cloudApiUrl) ? `云端同步：${cloudStatus || '等待同步'}` : '当前为单机模式'}</span>
           </div>
         </header>
         <dl className="detail-grid">
@@ -2954,6 +3167,8 @@ function App() {
       <LoginScreen
         accounts={accounts}
         account={account}
+        cloudApiUrl={cloudApiUrl}
+        setCloudApiUrl={setCloudApiUrl}
         onLogin={handleLogin}
         onRegister={handleRegisterAccount}
         onResetPassword={handleLoginPasswordReset}
@@ -2979,6 +3194,7 @@ function App() {
         <div className="sidebar-footer">
           <span>当前经销商代码</span>
           <strong>{account.username}</strong>
+          <small>{normalizeCloudApiUrl(cloudApiUrl) ? (cloudStatus || '云端模式') : '单机模式'}</small>
         </div>
       </aside>
       <main className="workspace">
