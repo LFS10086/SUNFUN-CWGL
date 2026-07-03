@@ -19,6 +19,8 @@ async function request(path, { method = 'GET', token, body } = {}) {
 
 const dealerCode = `JLTEST${Date.now().toString().slice(-6)}`
 const password = '123456'
+await request('/api/health')
+await request('/api/health/storage')
 const reg = await request('/api/auth/register', {
   method: 'POST',
   body: { dealerCode, displayName, role: roleDealer, password },

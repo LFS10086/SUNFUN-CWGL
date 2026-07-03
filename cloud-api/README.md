@@ -34,3 +34,38 @@ https://api.example.com
 ## 注意
 
 当前版本优先解决“云端存储”和“多电脑同账号查看同一套数据”。票据文件仍会随数据快照一起保存，数据量很大时建议下一步接腾讯云 COS。
+
+## 健康检查
+
+部署后可分别检查服务和云端数据目录：
+
+```bash
+curl http://127.0.0.1:8787/api/health
+curl http://127.0.0.1:8787/api/health/storage
+```
+
+`/api/health/storage` 会实际写入并删除一个临时文件，用来确认服务器上的数据目录可写。
+
+## 云端备份
+
+部署脚本会安装 `sanfeng-cloud-api-backup.timer`，每天 03:20 自动备份云端数据目录。
+
+- 默认数据目录：`/data/sanfeng-finance`
+- 默认备份目录：`/data/sanfeng-finance-backups`
+- 默认保留最近 `14` 份备份
+
+手动备份：
+
+```bash
+sudo systemctl start sanfeng-cloud-api-backup.service
+ls -lh /data/sanfeng-finance-backups
+```
+
+恢复备份：
+
+```bash
+sudo SANFENG_CLOUD_DATA_DIR=/data/sanfeng-finance \
+  /opt/sanfeng-cloud-api/deploy/restore-data.sh /data/sanfeng-finance-backups/备份文件.tar.gz
+```
+
+恢复前脚本会自动再生成一份 `pre-restore-*.tar.gz`，避免误覆盖。

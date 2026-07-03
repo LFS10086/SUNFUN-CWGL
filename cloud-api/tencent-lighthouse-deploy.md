@@ -17,6 +17,15 @@ npm start
 
 ```bash
 curl http://127.0.0.1:8787/api/health
+curl http://127.0.0.1:8787/api/health/storage
 ```
 
 腾讯云防火墙需要放通 `8787` 端口。正式使用建议使用 Nginx 配置 HTTPS，再让桌面端填写 HTTPS 地址。
+
+自动备份验证：
+
+```bash
+sudo systemctl status sanfeng-cloud-api-backup.timer --no-pager
+sudo systemctl start sanfeng-cloud-api-backup.service
+ls -lh /data/sanfeng-finance-backups
+```

@@ -44,6 +44,7 @@ sudo rm -rf '$RemoteDir'/*
 sudo unzip -o /tmp/sanfeng-cloud-api-upload/sanfeng-cloud-api-tencent.zip -d '$RemoteDir'
 cd '$RemoteDir'
 sudo npm install --omit=dev
+sudo chmod +x '$RemoteDir/deploy/backup-data.sh' '$RemoteDir/deploy/restore-data.sh'
 if [ ! -f /etc/sanfeng-cloud-api.env ]; then
   SECRET=`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
   sudo sh -c "cat > /etc/sanfeng-cloud-api.env <<EOF
@@ -54,11 +55,15 @@ EOF"
 fi
 sudo chown -R www-data:www-data '$RemoteDir' '$DataDir' || true
 sudo cp '$RemoteDir/deploy/sanfeng-cloud-api.service' /etc/systemd/system/sanfeng-cloud-api.service
+sudo cp '$RemoteDir/deploy/sanfeng-cloud-api-backup.service' /etc/systemd/system/sanfeng-cloud-api-backup.service
+sudo cp '$RemoteDir/deploy/sanfeng-cloud-api-backup.timer' /etc/systemd/system/sanfeng-cloud-api-backup.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now sanfeng-cloud-api
+sudo systemctl enable --now sanfeng-cloud-api-backup.timer
 sudo systemctl restart sanfeng-cloud-api
 sleep 2
 curl -fsS http://127.0.0.1:8787/api/health
+curl -fsS http://127.0.0.1:8787/api/health/storage
 "@
 
 Write-Host "远程安装并启动服务 ..."
@@ -67,3 +72,4 @@ $remoteScript | ssh @sshArgs $remote "bash -s"
 Write-Host ""
 Write-Host "部署完成。请在腾讯云防火墙放通 8787 端口。"
 Write-Host "客户端云端 API 地址可先填写：http://$HostName`:8787"
+Write-Host "服务器已启用每日 03:20 自动备份，备份目录默认在 $DataDir-backups。"

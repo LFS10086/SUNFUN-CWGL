@@ -123,6 +123,24 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'sanfeng-finance-cloud-api', time: nowIso() })
 })
 
+app.get('/api/health/storage', async (_req, res) => {
+  const probeFile = path.join(DATA_DIR, `.health-${process.pid}-${Date.now()}.tmp`)
+  try {
+    await ensureDataDir()
+    await fs.writeFile(probeFile, nowIso(), 'utf8')
+    await fs.rm(probeFile, { force: true })
+    res.json({ ok: true, dataDir: DATA_DIR, writable: true, time: nowIso() })
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      dataDir: DATA_DIR,
+      writable: false,
+      message: error.message,
+      time: nowIso(),
+    })
+  }
+})
+
 app.post('/api/auth/register', async (req, res) => {
   const dealerCode = String(req.body?.dealerCode || '').trim()
   const displayName = String(req.body?.displayName || dealerCode).trim()
