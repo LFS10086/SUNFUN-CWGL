@@ -243,6 +243,42 @@ app.delete('/api/accounts/:accountId', requireAuth, async (req, res) => {
   res.json({ ok: true })
 })
 
+app.post('/api/accounts', requireAuth, async (req, res) => {
+  const displayName = String(req.body?.displayName || '').trim()
+  const role = String(req.body?.role || '店员').trim()
+  const password = String(req.body?.password || '')
+  if (!displayName || password.length < 6) {
+    res.status(400).json({ message: '请填写账户名称和至少 6 位密码' })
+    return
+  }
+  if (!['经销商', '财务', '店员'].includes(role)) {
+    res.status(400).json({ message: '职位不正确' })
+    return
+  }
+  const accounts = await readJson(accountsFile(), [])
+  const operator = accounts.find((item) => item.id === req.auth.accountId)
+  if (!operator || operator.role !== '经销商') {
+    res.status(403).json({ message: '只有经销商账号可以新增同代码账户' })
+    return
+  }
+  const account = {
+    id: `account-${crypto.randomUUID()}`,
+    username: req.auth.dealerCode,
+    dealerCode: req.auth.dealerCode,
+    displayName,
+    role,
+    passwordHash: hashPassword(password),
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }
+  accounts.unshift(account)
+  await writeJson(accountsFile(), accounts)
+  res.json({
+    account: normalizePublicAccount(account),
+    accounts: accounts.filter((item) => item.dealerCode === req.auth.dealerCode).map(normalizePublicAccount),
+  })
+})
+
 app.patch('/api/accounts/:accountId/password', requireAuth, async (req, res) => {
   const oldPassword = String(req.body?.oldPassword || '')
   const newPassword = String(req.body?.newPassword || '')

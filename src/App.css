@@ -226,6 +226,18 @@ button:disabled {
   font-size: 12px;
 }
 
+.inline-account-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 140px minmax(150px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #f6f9f8;
+  border: 1px solid #dce8e4;
+}
+
 .workspace {
   min-width: 0;
   display: flex;
@@ -1373,7 +1385,8 @@ tbody tr:hover,
   }
 
   .budget-add-form,
-  .budget-edit-row {
+  .budget-edit-row,
+  .inline-account-form {
     grid-template-columns: minmax(180px, 1fr) 96px 130px 110px;
   }
 }
@@ -1452,7 +1465,8 @@ tbody tr:hover,
   }
 
   .budget-add-form,
-  .budget-edit-row {
+  .budget-edit-row,
+  .inline-account-form {
     grid-template-columns: 1fr;
   }
 

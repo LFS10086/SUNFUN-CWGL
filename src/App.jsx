@@ -1179,6 +1179,7 @@ function App() {
   const [ocrRows, setOcrRows] = useState([])
   const [ocrProgress, setOcrProgress] = useState('')
   const [ocrBusy, setOcrBusy] = useState(false)
+  const [accountDraft, setAccountDraft] = useState({ displayName: '', role: '财务', password: '' })
   const cloudSyncSkipRef = useRef(false)
   const cloudBootLoadedRef = useRef(false)
 
@@ -1988,6 +1989,45 @@ function App() {
     link.download = `三峰整装财务备份_${today()}.json`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  const addSameDealerAccount = async (event) => {
+    event.preventDefault()
+    if (!canDeleteAccounts) {
+      addToast('只有经销商账号可以新增同代码账户', 'warning')
+      return
+    }
+    if (!accountDraft.displayName.trim() || accountDraft.password.length < 6) {
+      addToast('请填写账户名称和至少 6 位密码', 'warning')
+      return
+    }
+    if (normalizeCloudApiUrl(cloudApiUrl) && cloudToken) {
+      try {
+        const payload = await cloudRequest(cloudApiUrl, '/api/accounts', {
+          token: cloudToken,
+          method: 'POST',
+          body: accountDraft,
+        })
+        const snapshot = normalizeCloudSnapshot({ accounts: payload.accounts, data })
+        setAccounts(snapshot.accounts)
+        setAccountDraft({ displayName: '', role: '财务', password: '' })
+        addToast('云端同代码账户已新增')
+      } catch (error) {
+        addToast(error.message || '云端新增账户失败', 'warning')
+      }
+      return
+    }
+    const nextAccount = normalizeAccount({
+      id: uid('account'),
+      username: account.dealerCode,
+      dealerCode: account.dealerCode,
+      displayName: accountDraft.displayName.trim(),
+      role: accountDraft.role,
+      password: encodePassword(accountDraft.password),
+    }, accounts.length)
+    setAccounts((items) => [nextAccount, ...items])
+    setAccountDraft({ displayName: '', role: '财务', password: '' })
+    addToast('同代码账户已新增')
   }
 
   const deleteAccount = async (accountId) => {
@@ -3111,6 +3151,38 @@ function App() {
             <span>{account.dealerCode} 下共 {sameDealerAccounts.length} 个账户</span>
           </div>
         </header>
+        <form className="inline-account-form" onSubmit={addSameDealerAccount}>
+          <Field label="账户名称">
+            <input
+              value={accountDraft.displayName}
+              disabled={!canDeleteAccounts}
+              onChange={(event) => setAccountDraft((draft) => ({ ...draft, displayName: event.target.value }))}
+              placeholder="例如：门店财务"
+            />
+          </Field>
+          <Field label="职位">
+            <select
+              value={accountDraft.role}
+              disabled={!canDeleteAccounts}
+              onChange={(event) => setAccountDraft((draft) => ({ ...draft, role: event.target.value }))}
+            >
+              {accountRoleOptions.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </Field>
+          <Field label="初始密码">
+            <input
+              type="password"
+              value={accountDraft.password}
+              disabled={!canDeleteAccounts}
+              onChange={(event) => setAccountDraft((draft) => ({ ...draft, password: event.target.value }))}
+              placeholder="至少 6 位"
+            />
+          </Field>
+          <button className="primary-btn" type="submit" disabled={!canDeleteAccounts}>
+            <Plus size={17} />
+            新增账户
+          </button>
+        </form>
         <div className="account-list">
           {sameDealerAccounts.map((item) => (
             <article key={item.id} className="account-card">
