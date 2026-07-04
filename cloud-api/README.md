@@ -31,6 +31,24 @@ https://api.example.com
 - 服务端会校验登录 token 中的 `dealerCode`，不能读取或保存其他经销商代码的数据。
 - 删除经销商主账号时，会同步删除该经销商代码下的业务数据文件。
 
+## 正式域名和 HTTPS
+
+临时测试可以让客户端填写 `http://服务器IP:8787`。正式使用建议绑定域名并开启 HTTPS：
+
+```bash
+sudo /opt/sanfeng-cloud-api/deploy/setup-nginx-https.sh \
+  --domain api.example.com \
+  --email admin@example.com
+```
+
+执行前需要先把域名 A 记录解析到腾讯云服务器公网 IP，并在腾讯云防火墙放通 `80/TCP` 和 `443/TCP`。
+
+完成后桌面端登录页“云端 API 地址”填写：
+
+```text
+https://api.example.com
+```
+
 ## 注意
 
 当前版本优先解决“云端存储”和“多电脑同账号查看同一套数据”。票据文件仍会随数据快照一起保存，数据量很大时建议下一步接腾讯云 COS。

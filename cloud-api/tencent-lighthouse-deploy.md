@@ -22,6 +22,23 @@ curl http://127.0.0.1:8787/api/health/storage
 
 腾讯云防火墙需要放通 `8787` 端口。正式使用建议使用 Nginx 配置 HTTPS，再让桌面端填写 HTTPS 地址。
 
+正式域名 HTTPS：
+
+```bash
+sudo /opt/sanfeng-cloud-api/deploy/setup-nginx-https.sh \
+  --domain api.example.com \
+  --email admin@example.com
+```
+
+执行前确认域名已经解析到服务器公网 IP，并且腾讯云防火墙已放通 `80/TCP`、`443/TCP`。
+
+验证：
+
+```bash
+curl https://api.example.com/api/health
+curl https://api.example.com/api/health/storage
+```
+
 自动备份验证：
 
 ```bash

@@ -7,7 +7,7 @@ DATA_DIR=/data/sanfeng-finance
 sudo mkdir -p "$APP_DIR" "$DATA_DIR"
 sudo cp -r . "$APP_DIR"
 sudo cp "$APP_DIR/deploy/sanfeng-cloud-api.env" /etc/sanfeng-cloud-api.env
-sudo chmod +x "$APP_DIR/deploy/backup-data.sh" "$APP_DIR/deploy/restore-data.sh"
+sudo chmod +x "$APP_DIR/deploy/backup-data.sh" "$APP_DIR/deploy/restore-data.sh" "$APP_DIR/deploy/setup-nginx-https.sh"
 sudo chown -R www-data:www-data "$APP_DIR" "$DATA_DIR"
 
 cd "$APP_DIR"

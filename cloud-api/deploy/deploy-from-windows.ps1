@@ -44,7 +44,7 @@ sudo rm -rf '$RemoteDir'/*
 sudo unzip -o /tmp/sanfeng-cloud-api-upload/sanfeng-cloud-api-tencent.zip -d '$RemoteDir'
 cd '$RemoteDir'
 sudo npm install --omit=dev
-sudo chmod +x '$RemoteDir/deploy/backup-data.sh' '$RemoteDir/deploy/restore-data.sh'
+sudo chmod +x '$RemoteDir/deploy/backup-data.sh' '$RemoteDir/deploy/restore-data.sh' '$RemoteDir/deploy/setup-nginx-https.sh'
 if [ ! -f /etc/sanfeng-cloud-api.env ]; then
   SECRET=`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
   sudo sh -c "cat > /etc/sanfeng-cloud-api.env <<EOF
