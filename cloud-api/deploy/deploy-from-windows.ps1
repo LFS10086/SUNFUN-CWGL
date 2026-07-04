@@ -51,6 +51,7 @@ if [ ! -f /etc/sanfeng-cloud-api.env ]; then
 PORT=8787
 SANFENG_CLOUD_DATA_DIR=$DataDir
 SANFENG_JWT_SECRET=`$SECRET
+SANFENG_ALLOWED_ORIGINS=
 EOF"
 fi
 sudo chown -R www-data:www-data '$RemoteDir' '$DataDir' || true

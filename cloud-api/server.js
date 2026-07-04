@@ -9,14 +9,35 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT || 8787)
 const DATA_DIR = process.env.SANFENG_CLOUD_DATA_DIR || path.join(__dirname, 'data')
 const JWT_SECRET = process.env.SANFENG_JWT_SECRET || 'change-this-secret-before-deploy'
+const ALLOWED_ORIGINS = String(process.env.SANFENG_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean)
 const app = express()
 
 if (JWT_SECRET === 'change-this-secret-before-deploy') {
   console.warn('WARNING: SANFENG_JWT_SECRET is using the default value. Set a long random secret before production deployment.')
 }
 
-app.use(cors({ origin: true, credentials: false }))
+app.use(cors({
+  credentials: false,
+  origin(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true)
+      return
+    }
+    callback(new Error('Origin is not allowed by SANFENG_ALLOWED_ORIGINS'))
+  },
+}))
 app.use(express.json({ limit: '80mb' }))
+
+app.use((error, _req, res, next) => {
+  if (error?.message === 'Origin is not allowed by SANFENG_ALLOWED_ORIGINS') {
+    res.status(403).json({ message: '当前浏览器来源未被允许访问云端 API' })
+    return
+  }
+  next(error)
+})
 
 const accountsFile = () => path.join(DATA_DIR, 'accounts.json')
 const dealerFile = (dealerCode) => path.join(DATA_DIR, 'dealers', `${encodeURIComponent(dealerCode)}.json`)

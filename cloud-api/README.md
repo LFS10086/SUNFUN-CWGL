@@ -49,6 +49,22 @@ sudo /opt/sanfeng-cloud-api/deploy/setup-nginx-https.sh \
 https://api.example.com
 ```
 
+## 浏览器来源白名单
+
+云端 API 支持通过 `SANFENG_ALLOWED_ORIGINS` 限制浏览器来源：
+
+```bash
+sudo nano /etc/sanfeng-cloud-api.env
+```
+
+示例：
+
+```env
+SANFENG_ALLOWED_ORIGINS=https://api.example.com,https://finance.example.com
+```
+
+留空时不限制来源，适合当前 Electron 桌面客户端和部署验收脚本。桌面客户端、PowerShell 验收脚本等无 `Origin` 的请求始终允许。
+
 ## 注意
 
 当前版本优先解决“云端存储”和“多电脑同账号查看同一套数据”。票据文件仍会随数据快照一起保存，数据量很大时建议下一步接腾讯云 COS。
