@@ -64,6 +64,20 @@ curl http://127.0.0.1:8787/api/health/storage
 
 `/api/health/storage` 会实际写入并删除一个临时文件，用来确认服务器上的数据目录可写。
 
+从 Windows 本机完整验收公网 API：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\verify-remote-api.ps1 -ApiUrl http://服务器IP:8787
+```
+
+如果已经配置 HTTPS：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\verify-remote-api.ps1 -ApiUrl https://api.example.com
+```
+
+该脚本会自动测试健康检查、数据目录可写、注册、登录、保存快照和读取快照。
+
 ## 云端备份
 
 部署脚本会安装 `sanfeng-cloud-api-backup.timer`，每天 03:20 自动备份云端数据目录。
