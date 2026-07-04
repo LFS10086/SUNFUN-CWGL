@@ -94,6 +94,26 @@ powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\verify-remote-api.ps
 
 该脚本会自动测试健康检查、数据目录可写、注册、登录、保存快照和读取快照。
 
+## Windows 一键部署
+
+拿到腾讯云服务器 IP 和 SSH 信息后，可用总控脚本串联预检、部署和公网验收：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-windows.ps1 -HostName 服务器IP -User root
+```
+
+如果已准备域名并解析到服务器公网 IP，可同时配置 HTTPS：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-windows.ps1 `
+  -HostName 服务器IP `
+  -User root `
+  -Domain api.example.com `
+  -Email admin@example.com
+```
+
+使用私钥时追加 `-SshKeyPath D:\workspace\your-key.pem`。
+
 ## 云端备份
 
 部署脚本会安装 `sanfeng-cloud-api-backup.timer`，每天 03:20 自动备份云端数据目录。

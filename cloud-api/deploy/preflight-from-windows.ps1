@@ -14,16 +14,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$remote = "$User@$HostName"
+$remote = "${User}@${HostName}"
 $sshArgs = @("-p", "$Port", "-o", "BatchMode=yes", "-o", "ConnectTimeout=12")
 if ($SshKeyPath) {
   if (!(Test-Path -LiteralPath $SshKeyPath)) {
-    throw "SSH 私钥不存在：$SshKeyPath"
+    throw "SSH key does not exist: $SshKeyPath"
   }
   $sshArgs = @("-i", $SshKeyPath) + $sshArgs
 }
 
-Write-Host "检查 SSH 连接：$remote ..."
+Write-Host "Checking SSH connection: $remote ..."
 
 $script = @'
 set -e
@@ -55,14 +55,14 @@ $output = $script | ssh @sshArgs $remote "bash -s"
 $output
 
 if ($LASTEXITCODE -ne 0) {
-  throw "SSH 预检失败，请检查 IP、用户名、密码/密钥、腾讯云防火墙 22 端口。"
+  throw "SSH preflight failed. Check IP, username, password/key, and Tencent Cloud firewall port 22."
 }
 
 if ($output -match "node=MISSING" -or $output -match "npm=MISSING") {
-  Write-Warning "服务器缺少 Node.js 或 npm。建议购买腾讯云轻量应用服务器时选择 Node.js 应用模板，或先安装 Node.js。"
+  Write-Warning "Node.js or npm is missing. Use a Tencent Lighthouse Node.js image or install Node.js first."
 }
 if ($output -match "unzip=MISSING") {
-  Write-Warning "服务器缺少 unzip，部署脚本需要它解压上传包。Ubuntu 可执行：sudo apt-get update && sudo apt-get install -y unzip"
+  Write-Warning "unzip is missing. Ubuntu command: sudo apt-get update && sudo apt-get install -y unzip"
 }
 
-Write-Host "预检完成。若无 WARNING，可执行 deploy-from-windows.ps1 部署。"
+Write-Host "Preflight completed. If there is no WARNING, run deploy-from-windows.ps1."

@@ -42,6 +42,12 @@ Windows 本机公网验收：
 powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\verify-remote-api.ps1 -ApiUrl http://服务器IP:8787
 ```
 
+Windows 一键预检、部署并验收：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-windows.ps1 -HostName 服务器IP -User root
+```
+
 正式域名 HTTPS：
 
 ```bash
@@ -63,6 +69,16 @@ HTTPS 公网验收：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\verify-remote-api.ps1 -ApiUrl https://api.example.com
+```
+
+带 HTTPS 的一键部署：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-windows.ps1 `
+  -HostName 服务器IP `
+  -User root `
+  -Domain api.example.com `
+  -Email admin@example.com
 ```
 
 自动备份验证：

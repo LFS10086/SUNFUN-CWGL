@@ -22,10 +22,10 @@ $ErrorActionPreference = "Stop"
 
 $package = "D:\workspace\sanfeng-cloud-api-tencent.zip"
 if (!(Test-Path -LiteralPath $package)) {
-  throw "未找到部署包：$package，请先在项目中重新生成部署包。"
+  throw "Deployment package not found: $package. Regenerate it first."
 }
 
-$remote = "$User@$HostName"
+$remote = "${User}@${HostName}"
 $sshArgs = @("-p", "$Port")
 $scpArgs = @("-P", "$Port")
 if ($SshKeyPath) {
@@ -33,31 +33,31 @@ if ($SshKeyPath) {
   $scpArgs = @("-i", $SshKeyPath) + $scpArgs
 }
 
-Write-Host "上传云端 API 部署包到 $remote ..."
+Write-Host "Uploading cloud API package to $remote ..."
 ssh @sshArgs $remote "mkdir -p /tmp/sanfeng-cloud-api-upload"
 scp @scpArgs $package "${remote}:/tmp/sanfeng-cloud-api-upload/sanfeng-cloud-api-tencent.zip"
 
-$remoteScript = @"
+$remoteScript = @'
 set -e
-sudo mkdir -p '$RemoteDir' '$DataDir'
-sudo rm -rf '$RemoteDir'/*
-sudo unzip -o /tmp/sanfeng-cloud-api-upload/sanfeng-cloud-api-tencent.zip -d '$RemoteDir'
-cd '$RemoteDir'
+sudo mkdir -p '__REMOTE_DIR__' '__DATA_DIR__'
+sudo rm -rf '__REMOTE_DIR__'/*
+sudo unzip -o /tmp/sanfeng-cloud-api-upload/sanfeng-cloud-api-tencent.zip -d '__REMOTE_DIR__'
+cd '__REMOTE_DIR__'
 sudo npm install --omit=dev
-sudo chmod +x '$RemoteDir/deploy/backup-data.sh' '$RemoteDir/deploy/restore-data.sh' '$RemoteDir/deploy/setup-nginx-https.sh'
+sudo chmod +x '__REMOTE_DIR__/deploy/backup-data.sh' '__REMOTE_DIR__/deploy/restore-data.sh' '__REMOTE_DIR__/deploy/setup-nginx-https.sh'
 if [ ! -f /etc/sanfeng-cloud-api.env ]; then
-  SECRET=`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+  SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
   sudo sh -c "cat > /etc/sanfeng-cloud-api.env <<EOF
 PORT=8787
-SANFENG_CLOUD_DATA_DIR=$DataDir
-SANFENG_JWT_SECRET=`$SECRET
+SANFENG_CLOUD_DATA_DIR=__DATA_DIR__
+SANFENG_JWT_SECRET=$SECRET
 SANFENG_ALLOWED_ORIGINS=
 EOF"
 fi
-sudo chown -R www-data:www-data '$RemoteDir' '$DataDir' || true
-sudo cp '$RemoteDir/deploy/sanfeng-cloud-api.service' /etc/systemd/system/sanfeng-cloud-api.service
-sudo cp '$RemoteDir/deploy/sanfeng-cloud-api-backup.service' /etc/systemd/system/sanfeng-cloud-api-backup.service
-sudo cp '$RemoteDir/deploy/sanfeng-cloud-api-backup.timer' /etc/systemd/system/sanfeng-cloud-api-backup.timer
+sudo chown -R www-data:www-data '__REMOTE_DIR__' '__DATA_DIR__' || true
+sudo cp '__REMOTE_DIR__/deploy/sanfeng-cloud-api.service' /etc/systemd/system/sanfeng-cloud-api.service
+sudo cp '__REMOTE_DIR__/deploy/sanfeng-cloud-api-backup.service' /etc/systemd/system/sanfeng-cloud-api-backup.service
+sudo cp '__REMOTE_DIR__/deploy/sanfeng-cloud-api-backup.timer' /etc/systemd/system/sanfeng-cloud-api-backup.timer
 sudo systemctl daemon-reload
 sudo systemctl enable --now sanfeng-cloud-api
 sudo systemctl enable --now sanfeng-cloud-api-backup.timer
@@ -65,12 +65,14 @@ sudo systemctl restart sanfeng-cloud-api
 sleep 2
 curl -fsS http://127.0.0.1:8787/api/health
 curl -fsS http://127.0.0.1:8787/api/health/storage
-"@
+'@
 
-Write-Host "远程安装并启动服务 ..."
+$remoteScript = $remoteScript.Replace("__REMOTE_DIR__", $RemoteDir).Replace("__DATA_DIR__", $DataDir)
+
+Write-Host "Installing and starting remote service ..."
 $remoteScript | ssh @sshArgs $remote "bash -s"
 
 Write-Host ""
-Write-Host "部署完成。请在腾讯云防火墙放通 8787 端口。"
-Write-Host "客户端云端 API 地址可先填写：http://$HostName`:8787"
-Write-Host "服务器已启用每日 03:20 自动备份，备份目录默认在 $DataDir-backups。"
+Write-Host "Deployment completed. Open Tencent Cloud firewall port 8787."
+Write-Host "Client cloud API URL: http://$HostName`:8787"
+Write-Host "Daily 03:20 backup timer is enabled. Default backup directory: $DataDir-backups."
