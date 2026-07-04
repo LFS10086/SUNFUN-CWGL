@@ -661,10 +661,19 @@ function createProjectNo(customers = []) {
 function budgetOptionsForCustomer(customer) {
   return (customer?.budget || []).map((item) => ({
     value: item.id,
-    label: item.item,
+    label: budgetContentLabel(item),
     category: item.category,
-    item: item.item,
+    item: budgetContentLabel(item),
   }))
+}
+
+function budgetContentLabel(item) {
+  const value = String(item?.item || '').trim()
+  const category = String(item?.category || '').trim()
+  if (!value) return ''
+  if (category && value.startsWith(`${category} / `)) return value.slice(category.length + 3).trim()
+  if (category && value.startsWith(`${category}/`)) return value.slice(category.length + 1).trim()
+  return value.replace(/^(?:水|电|瓦|木|油|材料|其他)\s*\/\s*/, '').trim()
 }
 
 function normalizeBudgetTextValue(value) {
@@ -1629,7 +1638,7 @@ function App() {
       ...expenseDraft,
       budgetId: selectedBudget?.id || '',
       category: selectedBudget?.category || expenseDraft.category,
-      budgetItem: selectedBudget?.item || expenseDraft.category,
+      budgetItem: budgetContentLabel(selectedBudget) || expenseDraft.category,
       amount: Number(expenseDraft.amount),
     }
     const budget = selectedBudget
@@ -2688,7 +2697,7 @@ function App() {
                   <tr key={expense.id}>
                     <td>{expense.date}</td>
                     <td>{expense.projectNo}</td>
-                    <td>{expense.budgetItem || '-'}</td>
+                    <td>{budgetContentLabel({ item: expense.budgetItem, category: expense.category }) || '-'}</td>
                     <td>{expense.purpose}</td>
                     <td>{partnerMap.get(expense.partnerId)?.name || expense.payeeType}</td>
                     <td>{money(expense.amount)}</td>
