@@ -81,6 +81,12 @@ powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-win
   -Email admin@example.com
 ```
 
+远程诊断：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\collect-remote-diagnostics.ps1 -HostName 服务器IP -User root
+```
+
 自动备份验证：
 
 ```bash

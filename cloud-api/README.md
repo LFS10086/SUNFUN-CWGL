@@ -114,6 +114,16 @@ powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\deploy-full-from-win
 
 使用私钥时追加 `-SshKeyPath D:\workspace\your-key.pem`。
 
+## 远程诊断
+
+如果部署后访问失败，可从 Windows 本机收集服务器状态和日志：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\cloud-api\deploy\collect-remote-diagnostics.ps1 -HostName 服务器IP -User root
+```
+
+使用私钥时追加 `-SshKeyPath D:\workspace\your-key.pem`。诊断脚本只读取服务状态、日志、端口、Nginx、数据目录和备份目录，不会修改服务器。
+
 ## 云端备份
 
 部署脚本会安装 `sanfeng-cloud-api-backup.timer`，每天 03:20 自动备份云端数据目录。
